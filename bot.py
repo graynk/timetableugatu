@@ -486,15 +486,13 @@ def get_table(tg_id, deltaday, needed_week, needed_date):
     faculty = red.hget(tg_id, 'faculty')
     year = red.hget(tg_id, 'year')
     groupname = red.hget(tg_id, 'group')
-
+    # короче после последнего изменения сайта я рассчитываю на то, что dict упорядоченный
     param = dict(csrfmiddlewaretoken=page.cookies['csrftoken'], faculty=faculty, klass=year)
 
     return_message = ''
-    param['ScheduleType'] = 'На дату'
     param['group'] = groupname
+    param['ScheduleType'] = 'На дату'
     param['week'] = '1'
-    param['sem'] = sem
-    param['view'] = 'ПОКАЗАТЬ'
     current_week = find_week()
     try:
         current_week_numb = int(current_week)
@@ -521,14 +519,28 @@ def get_table(tg_id, deltaday, needed_week, needed_date):
     param['week'] = current_week
 
     logging.log(logging.INFO, "week " + current_week)
-    day = str(needed_date.day)
+    day = "{0:0=2d}".format(needed_date.day)
     month = str(needed_date.month)
     year = str(needed_date.year)
     dotdate = day + '.' + month + '.' + year
-    param['date'] = dotdate
+    dashdate = year + '-' + month + '-' + day
+    param['date'] = dashdate
+    param['sem'] = sem
+    param['view'] = 'ПОКАЗАТЬ'
     startt = time.time()
-    answer = client.post(URL, param)
-    logging.log(logging.INFO, 'final request ' + str(time.time() - startt))
+    #answer = client.post(URL, param)
+    head = {'Host': 'lk.ugatu.su','User-Agent': 'Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:61.0) Gecko/20100101 Firefox/61.0',
+'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+'Accept-Language': 'en-GB,en;q=0.5',
+'Accept-Encoding': 'gzip, deflate, br',
+'Referer': 'https://lk.ugatu.su/raspisanie/',
+'Content-Type': 'application/x-www-form-urlencoded',
+'DNT': '1',
+'Connection': 'keep-alive',
+'Upgrade-Insecure-Requests': '1'}
+
+    req = requests.Request('POST', URL, headers=head, data=param, cookies=page.cookies).prepare()
+    answer = client.send(req)    logging.log(logging.INFO, 'final request ' + str(time.time() - startt))
     beas = BeautifulSoup(answer.text, 'lxml')
     message_list = []
     for row in beas.findAll('td'):
